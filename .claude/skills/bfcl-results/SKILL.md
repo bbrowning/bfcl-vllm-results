@@ -214,6 +214,58 @@ grep '"id": "multi_turn_base_0"' result.json | jq .
 5. **A test missing from score file** could mean it passed OR didn't run (check result file)
 6. **Multi-turn tests are complex** - read the full error details to understand failures
 
+## Automation Scripts
+
+This skill includes helper scripts for common analysis tasks in the [scripts/](scripts/) directory.
+
+### compare_runs.py
+
+Compares two BFCL test runs to identify regressions and improvements.
+
+**Usage**: Run [scripts/compare_runs.py](scripts/compare_runs.py) with baseline directory, modified directory, and test category:
+
+```bash
+scripts/compare_runs.py <baseline_dir> <modified_dir> <test_category>
+```
+
+**Example**:
+```bash
+.claude/skills/bfcl-results/scripts/compare_runs.py \
+  result-non-strict-parser \
+  result-chat-tool-fix \
+  multi_turn
+```
+
+**Output**:
+- Summary statistics for both runs
+- List of regressed test IDs (passed → failed)
+- List of improved test IDs (failed → passed)
+- Regressions categorized by error type
+
+### extract_test.py
+
+Extracts detailed information about a specific test.
+
+**Usage**: Run [scripts/extract_test.py](scripts/extract_test.py) with result directory and test ID:
+
+```bash
+scripts/extract_test.py <result_dir> <test_id>
+```
+
+**Example**:
+```bash
+.claude/skills/bfcl-results/scripts/extract_test.py \
+  result-chat-tool-fix \
+  multi_turn_base_104
+```
+
+**Output**:
+- Test status (passed/failed)
+- Error details if failed
+- Full prompt
+- Model response
+- Expected answer
+
 ## Validation Steps
 
 When analyzing BFCL results:
