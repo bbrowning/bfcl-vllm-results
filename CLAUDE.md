@@ -5,12 +5,7 @@ This repository contains Berkeley Function Calling Leaderboard (BFCL) benchmark 
 ## What's Here
 
 BFCL benchmark results from multiple test runs comparing different configurations:
-- `result-baseline/` - Raw model outputs from baseline run
-- `result-chat-tool-fix/` - Raw model outputs from chat-tool-fix variant
-- `result-non-strict-parser/` - Raw model outputs from non-strict-parser variant
-- `score-baseline/` - Evaluation scores from baseline run
-- `score-chat-tool-fix/` - Evaluation scores from chat-tool-fix variant
-- `score-non-strict-parser/` - Evaluation scores from non-strict-parser variant
+- `results/`
 
 ## Analyzing Results
 
@@ -31,7 +26,7 @@ To analyze or compare these results:
 2. Use the commands and workflows from the skill
 3. Remember: score files ONLY contain failures, passing tests are in result files only
 
-## Test Categories
+## Sample Test Categories (non-exhaustive)
 
 - **multi_turn_base**: Multi-turn conversation scenarios
 - **live_simple**: Simple live API calls
