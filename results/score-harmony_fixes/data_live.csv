@@ -1,0 +1,2 @@
+Rank,Model,Live Overall Acc,AST Summary,Python Simple AST,Python Multiple AST,Python Parallel AST,Python Parallel Multiple AST,Irrelevance Detection,Relevance Detection
+1,openai/gpt-oss-120b (FC) (vLLM),72.98%,72.98%,79.46%,74.17%,0.00%,0.00%,83.26%,75.00%
