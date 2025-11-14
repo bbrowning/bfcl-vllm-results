@@ -1,6 +1,6 @@
 ---
 name: Interpreting BFCL Results
-description: Use when analyzing Berkeley Function Calling Leaderboard (BFCL) benchmark results. Explains BFCL's two-file structure (result and score files), how to interpret accuracy metrics, compare runs, identify regressions, and understand multi-turn test failures. Essential for correctly interpreting pass/fail counts and finding example test cases.
+description: Use when analyzing Berkeley Function Calling Leaderboard (BFCL) benchmark results. Explains BFCL's two-file structure (result and score files), how to interpret accuracy metrics, compare runs, categorize test stability across multiple runs, identify regressions, and understand multi-turn test failures. Essential for correctly interpreting pass/fail counts, analyzing flaky tests, and finding example test cases.
 ---
 
 # Interpreting BFCL Results
@@ -214,9 +214,112 @@ grep '"id": "multi_turn_base_0"' result.json | jq .
 5. **A test missing from score file** could mean it passed OR didn't run (check result file)
 6. **Multi-turn tests are complex** - read the full error details to understand failures
 
+## Categorizing Tests Across Multiple Runs
+
+When analyzing test stability across multiple BFCL runs, categorize tests into three groups:
+
+1. **Stable passes**: Tests passing in ALL runs where executed
+2. **Flaky tests**: Tests with mixed results (pass in some runs, fail in others)
+3. **Stable failures**: Tests failing in ALL runs where executed
+
+### Analysis Script Pattern
+
+Create a script that:
+1. Discovers all score-*/result-* directory pairs automatically
+2. For each test category, identifies which runs have results
+3. Tracks pass/fail status for each test across all runs
+4. Categorizes tests based on consistency
+5. Outputs both console summary and JSON files
+
+### Required JSON Output Format
+
+Generate three JSON files with tests grouped by category:
+
+**stable_tests.json**:
+```json
+{
+  "multi_turn_base": ["multi_turn_base_0", "multi_turn_base_1"],
+  "live_simple": ["live_simple_0", "live_simple_1"]
+}
+```
+
+**flaky_tests.json**: Same format, lists tests with inconsistent results
+
+**failing_tests.json**: Same format, lists tests that always fail
+
+### Key Implementation Details
+
+```python
+# For each run and category combination:
+all_tests = get_test_ids_from_result(result_file)
+failed_tests = get_failed_test_ids_from_score(score_file)
+passed_tests = all_tests - failed_tests
+
+# Track status across runs
+for test_id in all_tests:
+    if test_id in passed_tests:
+        test_status[test_id]["passed"] += 1
+    else:
+        test_status[test_id]["failed"] += 1
+    test_status[test_id]["total_runs"] += 1
+
+# Categorize based on consistency
+if passed == total_runs:
+    # Stable pass
+elif failed == total_runs:
+    # Stable failure
+else:
+    # Flaky test
+```
+
+### Console Output Format
+
+Provide both category-level and overall summaries:
+
+```
+Category: multi_turn_base
+  Runs analyzed: 6 (baseline, blah, chat-multi-turn, ...)
+  Total tests: 200
+  Stable passes:   80 ( 40.0%)
+  Flaky tests:     74 ( 37.0%)
+  Stable fails:    46 ( 23.0%)
+
+OVERALL SUMMARY
+Total unique tests: 2111
+  Stable passes: 1203 ( 57.0%)
+  Flaky tests:    367 ( 17.4%)
+  Stable fails:   541 ( 25.6%)
+```
+
+### Typical Findings
+
+- Live tests typically show 70-76% stability
+- Multi-turn tests show 21-40% stability
+- Multi-turn miss_func category is often most flaky (40-50%)
+- Flaky tests indicate non-determinism or environment sensitivity
+
 ## Automation Scripts
 
 This skill includes helper scripts for common analysis tasks in the [scripts/](scripts/) directory.
+
+### categorize_tests.py
+
+Analyzes test stability across ALL runs in the directory, categorizing tests as stable passes, flaky, or stable failures.
+
+**Usage**: Run from the root directory containing score-*/result-* folders:
+
+```bash
+./categorize_tests.py
+```
+
+**Output**:
+- Console summary with category-level and overall statistics
+- `stable_tests.json`: Tests passing in all runs, grouped by category
+- `flaky_tests.json`: Tests with inconsistent results, grouped by category
+- `failing_tests.json`: Tests failing in all runs, grouped by category
+- Top insights identifying most flaky and most stable categories
+
+**When to use**: When you need to understand test stability patterns across multiple runs, identify flaky tests to investigate, or track progress as you fix issues.
 
 ### compare_runs.py
 
