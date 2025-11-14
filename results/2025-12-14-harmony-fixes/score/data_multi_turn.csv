@@ -1,2 +1,3 @@
 Rank,Model,Multi Turn Overall Acc,Base,Miss Func,Miss Param,Long Context
 1,openai/gpt-oss-120b (FC) (vLLM),53.25%,62.00%,50.00%,49.50%,51.50%
+2,openai/gpt-oss-20b (FC) (vLLM),44.50%,51.50%,39.50%,39.50%,47.50%
