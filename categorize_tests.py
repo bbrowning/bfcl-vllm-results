@@ -9,9 +9,14 @@ Produces:
 - failing_tests.json: Tests failing in ALL runs, grouped by category
 
 Usage:
-    ./categorize_tests.py
+    ./categorize_tests.py <run1> <run2> [run3 ...]
+
+Examples:
+    ./categorize_tests.py baseline v0.11.0
+    ./categorize_tests.py results/baseline results/v0.11.0
 """
 
+import sys
 import json
 from pathlib import Path
 from collections import defaultdict
@@ -52,25 +57,45 @@ def get_failed_test_ids_from_score(score_file: Path) -> Set[str]:
                     continue
     return failed_ids
 
-def find_all_runs_and_categories() -> Dict[str, List[str]]:
+def normalize_run_name(run_path: str) -> str:
     """
-    Find all test categories and which runs have results for them.
+    Normalize run name by stripping 'results/' prefix if present.
+
+    Examples:
+        'baseline' -> 'baseline'
+        'results/baseline' -> 'baseline'
+        'results/v0.11.0' -> 'v0.11.0'
+    """
+    run_path = run_path.rstrip('/')
+    if run_path.startswith('results/'):
+        return run_path.replace('results/', '', 1)
+    return run_path
+
+def find_categories_for_runs(run_names: List[str]) -> Dict[str, List[str]]:
+    """
+    Find all test categories for the specified runs.
+
+    Args:
+        run_names: List of run names to analyze
 
     Returns:
-        Dict mapping category -> [list of run names]
+        Dict mapping category -> [list of run names that have that category]
     """
     categories = defaultdict(list)
+    results_dir = Path('results')
 
-    score_dirs = sorted([d for d in Path('.').glob('score-*') if d.is_dir()])
+    for run_name in run_names:
+        score_dir = results_dir / f'score-{run_name}'
 
-    for score_dir in score_dirs:
-        run_name = score_dir.name.replace('score-', '')
+        if not score_dir.exists():
+            print(f"Warning: Score directory not found: {score_dir}")
+            continue
 
         for score_file in score_dir.rglob('*_score.json'):
             filename = score_file.name
             category = filename.replace('BFCL_v4_', '').replace('_score.json', '')
 
-            result_dir = Path(str(score_dir).replace('score-', 'result-'))
+            result_dir = results_dir / f'result-{run_name}'
             result_file = result_dir / score_file.relative_to(score_dir).parent / filename.replace('_score.json', '_result.json')
 
             if result_file.exists():
@@ -86,10 +111,11 @@ def analyze_category(category: str, runs: List[str]) -> Tuple[Set[str], Set[str]
         (stable_passes, flaky_tests, stable_failures)
     """
     test_status = defaultdict(lambda: {"passed": 0, "failed": 0, "total_runs": 0})
+    results_dir = Path('results')
 
     for run in runs:
-        result_pattern = f"result-{run}/**/BFCL_v4_{category}_result.json"
-        score_pattern = f"score-{run}/**/BFCL_v4_{category}_score.json"
+        result_pattern = f"results/result-{run}/**/BFCL_v4_{category}_result.json"
+        score_pattern = f"results/score-{run}/**/BFCL_v4_{category}_score.json"
 
         result_files = list(Path('.').glob(result_pattern))
         score_files = list(Path('.').glob(score_pattern))
@@ -150,15 +176,32 @@ def save_json_output(stable_by_category: Dict[str, List[str]],
     print()
 
 def main():
+    if len(sys.argv) < 2:
+        print("Usage: ./categorize_tests.py <run1> <run2> [run3 ...]")
+        print()
+        print("Examples:")
+        print("  ./categorize_tests.py baseline v0.11.0")
+        print("  ./categorize_tests.py results/baseline results/v0.11.0")
+        print()
+        sys.exit(1)
+
+    # Normalize run names (strip 'results/' prefix if present)
+    run_names = [normalize_run_name(arg) for arg in sys.argv[1:]]
+
     print("=" * 80)
     print("BFCL Test Categorization Analysis")
     print("=" * 80)
+    print(f"Analyzing runs: {', '.join(run_names)}")
     print()
 
-    categories = find_all_runs_and_categories()
+    categories = find_categories_for_runs(run_names)
 
     if not categories:
         print("No test categories found!")
+        print("Make sure the following directories exist:")
+        for run_name in run_names:
+            print(f"  - results/score-{run_name}")
+            print(f"  - results/result-{run_name}")
         return
 
     stable_by_category = {}
